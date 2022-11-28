@@ -13,8 +13,8 @@
 # define PAGESIZE 4096
 #endif
 
-const char shellcode[] = "\xeb\xef";
-
+//const char shellcode[] = "\xeb\xef";
+const char shellcode[] = "\xcc\xcc";
 
 void *alloc_rwx(void *ptr, size_t size) {
 #ifdef _WIN32
@@ -41,7 +41,7 @@ void protect_rwx(void *ptr) {
 }
 
 int main(int argc, char **argv) {
-	int (*fp)();
+	void (*fp)();
 	int foo;
 	size_t cnt;
 	FILE *file;
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
 			printf("file %s\n", argv[1]);
 		}
 		cnt = fread((void*)fp, 1, PAGESIZE, file);
-		printf("Got %d bytes\n", cnt);
+		printf("Got %zd bytes\n", cnt);
 	} else {
 		printf("Copying static shellcode (%d bytes from %p to %p)\n", (int)sizeof(shellcode), shellcode, fp);
 		memcpy((void*)fp, (const void*)shellcode, (size_t)sizeof(shellcode));
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 		"mov %%ecx, %%ecx\n\t"
 		// sub for a positive BufferOffset, add for negative
 		"add $300, %%ecx\n\t"
-		: "=c"(foo) 
+		: "=c"(foo)
 		: "c"(fp)
 	);
 #else
@@ -89,14 +89,14 @@ int main(int argc, char **argv) {
 #ifdef _MSC_VER
 	// mostly broken, but whatever
 	__try {
-		(int)(*fp)();
+		(void)(*fp)();
 	} __except(GetExceptionCode() == EXCEPTION_BREAKPOINT ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
 		// Emulate linux behavior when we hit a cc
 		printf("Trace/breakpoint trap\n");
 		ExitProcess(133);
 	}
 #else
-	(int)(*fp)();
+	(void)(*fp)();
 #endif
 
 	return 0;
